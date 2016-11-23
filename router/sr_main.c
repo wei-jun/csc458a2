@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     char *logfile = 0;
     struct sr_instance sr;
     /* below added for NAT */
-    int nat;  /* nat = 1 nat enable; 0 not */
+    int nat_on = 0;
     int icmp_query_timeout = DEFAULT_ICMP_QUERY_TIMEOUT;
     int tcp_est_timeout = DEFAULT_TCP_EST_TIMEOUT;
     int tcp_trans_timeout = DEFAULT_TCP_TRANS_TIMEOUT;
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
                 break;
             /* below added for NAT */
             case 'n':
-                nat = 1;
+                nat_on = 1;
                 break;
             case 'I':
                 icmp_query_timeout = optarg;
@@ -273,7 +273,7 @@ static void sr_init_instance(struct sr_instance* sr)
     sr->logfile = 0;
     /* below added for NAT */
     sr->nat_mapping_list = 0;
-    sr->nat = nat;
+    sr->nat_on = nat_on;
     sr->icmp_query_timeout = icmp_query_timeout;
     sr->tcp_est_timeout = tcp_est_timeout;
     sr->tcp_trans_timeout = tcp_trans_timeout;

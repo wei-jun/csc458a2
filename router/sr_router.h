@@ -55,11 +55,11 @@ struct sr_instance
     pthread_attr_t attr;
     FILE* logfile;
     /* the below added for NAT */
-    struct sr_nat_mapping* nat_mapping_list;
-    int nat = 0;  /* nat = 1 nat enable; 0 not */
-    int icmp_query_timeout;
-    int tcp_est_timeout;
-    int tcp_trans_timeout;
+    struct sr_nat* nat;
+    int nat_on = 0;  /* nat_on = 1 nat enable; 0 not */
+    int icmp_query_timeout;  /* ICMP query timeout interval in seconds */
+    int tcp_est_timeout;  /* TCP Established Idle Timeout in seconds */
+    int tcp_trans_timeout;  /* TCP Transitory Idle Timeout in seconds */
 };
 
 /* -- sr_main.c -- */
