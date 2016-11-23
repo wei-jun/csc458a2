@@ -244,7 +244,6 @@ struct sr_arpreq *sr_arpcache_insert(struct sr_arpcache *cache,
                 next = req->next;
                 cache->requests = next;
             }
-            
             break;
         }
         prev = req;

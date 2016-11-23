@@ -20,11 +20,10 @@ int sr_nat_init(struct sr_nat *nat) { /* Initializes the nat */
   pthread_attr_setscope(&(nat->thread_attr), PTHREAD_SCOPE_SYSTEM);
   pthread_attr_setscope(&(nat->thread_attr), PTHREAD_SCOPE_SYSTEM);
   pthread_create(&(nat->thread), &(nat->thread_attr), sr_nat_timeout, nat);
-
   /* CAREFUL MODIFYING CODE ABOVE THIS LINE! */
-
   nat->mappings = NULL;
   /* Initialize any variables here */
+
   return success;
 }
 
@@ -35,7 +34,7 @@ int sr_nat_destroy(struct sr_nat *nat) {  /* Destroys the nat (free memory) */
   struct sr_nat_mapping* current = nat->mappings;
   while(current != NULL){
     struct sr_nat* next = current->next;
-    /*free connections in the sr_nat_mapping*/
+    /* free connections in the sr_nat_mapping*/
     struct sr_nat_connection* connection = current->conns;
     while(connection != NULL){
       struct sr_nat_connection* next_conns = connection -> next;
@@ -51,6 +50,7 @@ int sr_nat_destroy(struct sr_nat *nat) {  /* Destroys the nat (free memory) */
 
 }
 
+
 void *sr_nat_timeout(void *nat_ptr) {  /* Periodic Timout handling */
   struct sr_nat *nat = (struct sr_nat *)nat_ptr;
   while (1) {
@@ -58,6 +58,24 @@ void *sr_nat_timeout(void *nat_ptr) {  /* Periodic Timout handling */
     pthread_mutex_lock(&(nat->lock));
     time_t curtime = time(NULL);
     /* handle periodic tasks here */
+    struct sr_nat_mapping* map = nat -> mappings; 
+    struct sr_nat_mapping* top = map;
+    struct sr_nat_mapping* next = NULL;
+    while(map -> != NULL){
+      /*handle imcp*/
+      struct sr_nat_mapping* next =  map->next;
+      if(map -> type == nat_mapping_icmp){
+        if(difftime(curtime, map->last_updated) >= 60){
+           next = map -> next;
+           
+
+          /* free imcp mappings */
+
+
+        }
+          
+      }
+    }
     pthread_mutex_unlock(&(nat->lock));
   }
   return NULL;
@@ -105,7 +123,7 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
   struct sr_nat_mapping *current = nat->mappings;
   struct sr_nat_mapping *copy = (struct sr_nat_mapping*) malloc (sizeof(struct sr_nat_mapping));
   while(current != NULL){
-    if(current->type==type && current->aux_int== aux_int && current->ip_int=ip_int){
+    if(current->type==type && current->aux_int==aux_int && current->ip_int=ip_int){
       copy->type = current->type;
       copy->ip_int =current->ip_int;
       copy->ip_ext =current->ip_ext;
@@ -146,6 +164,10 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   }
   /* create a new external prot number*/
   port = port + 1;
+  /*make sure port is unique*/
+  while(port == aux_int){
+    prot++;
+  }
   /* update new mapping data */
   mapping -> type = type;
   mapping -> ip_int = ip_int;
