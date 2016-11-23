@@ -18,6 +18,7 @@ struct sr_nat_connection {
   struct sr_nat_connection *next;
 };
 
+
 struct sr_nat_mapping {
   sr_nat_mapping_type type;
   uint32_t ip_int; /* internal ip addr */
@@ -28,6 +29,7 @@ struct sr_nat_mapping {
   struct sr_nat_connection *conns; /* list of connections. null for ICMP */
   struct sr_nat_mapping *next;
 };
+
 
 struct sr_nat {
   /* add any fields here */
@@ -44,6 +46,7 @@ struct sr_nat {
 int   sr_nat_init(struct sr_nat *nat);     /* Initializes the nat */
 int   sr_nat_destroy(struct sr_nat *nat);  /* Destroys the nat (free memory) */
 void *sr_nat_timeout(void *nat_ptr);  /* Periodic Timout */
+
 
 /* Get the mapping associated with given external port.
    You must free the returned structure if it is not NULL. */
