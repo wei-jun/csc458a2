@@ -54,6 +54,12 @@ struct sr_instance
     struct sr_arpcache cache;   /* ARP cache */
     pthread_attr_t attr;
     FILE* logfile;
+    /* the below added for NAT */
+    struct sr_nat* nat;
+    int nat_on = 0;  /* nat_on = 1 nat enable; 0 not */
+    int icmp_query_timeout;  /* ICMP query timeout interval in seconds */
+    int tcp_est_timeout;  /* TCP Established Idle Timeout in seconds */
+    int tcp_trans_timeout;  /* TCP Transitory Idle Timeout in seconds */
 };
 
 /* -- sr_main.c -- */
@@ -73,7 +79,7 @@ int sr_handle_arp_pkt(struct sr_instance* , uint8_t * , unsigned int , char* );
 void sr_handle_arp_request(struct sr_instance* , uint8_t * , unsigned int , char* );
 void sr_handle_arp_reply(struct sr_instance* , uint8_t * , unsigned int , char* );
 int sr_handle_ip_pkt(struct sr_instance* , uint8_t * , unsigned int , char* );
-int sr_handle_icmp_pkt(struct sr_instance* , uint8_t * , unsigned int , char* );
+int sr_handle_pkt_for_me(struct sr_instance* , uint8_t * , unsigned int , char* );
 void sr_icmp_dest_unreachable(struct sr_instance* , uint8_t * , unsigned int , char* , uint8_t, uint8_t );
 void sr_forward_ip_pkt(struct sr_instance* , uint8_t * , unsigned int , char* );
 struct sr_rt *sr_longest_prefix_match(struct sr_instance*, uint32_t);

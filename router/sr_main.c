@@ -44,6 +44,10 @@ extern char* optarg;
 #define DEFAULT_SERVER "localhost"
 #define DEFAULT_RTABLE "rtable"
 #define DEFAULT_TOPO 0
+/* below added for NAT */
+#define DEFAULT_ICMP_QUERY_TIMEOUT 60
+#define DEFAULT_TCP_EST_TIMEOUT 7440
+#define DEFAULT_TCP_TRANS_TIMEOUT 300
 
 static void usage(char* );
 static void sr_init_instance(struct sr_instance* );
@@ -66,10 +70,16 @@ int main(int argc, char **argv)
     unsigned int topo = DEFAULT_TOPO;
     char *logfile = 0;
     struct sr_instance sr;
+    /* below added for NAT */
+    int nat_on = 0;
+    int icmp_query_timeout = DEFAULT_ICMP_QUERY_TIMEOUT;
+    int tcp_est_timeout = DEFAULT_TCP_EST_TIMEOUT;
+    int tcp_trans_timeout = DEFAULT_TCP_TRANS_TIMEOUT;
 
     printf("Using %s\n", VERSION_INFO);
 
-    while ((c = getopt(argc, argv, "hs:v:p:u:t:r:l:T:")) != EOF)
+    /*add nI:E:R for NAT */
+    while ((c = getopt(argc, argv, "hs:v:p:u:t:r:l:T:nI:E:R:")) != EOF)
     {
         switch (c)
         {
@@ -101,6 +111,18 @@ int main(int argc, char **argv)
             case 'T':
                 template = optarg;
                 break;
+            /* below added for NAT */
+            case 'n':
+                nat_on = 1;
+                break;
+            case 'I':
+                icmp_query_timeout = optarg;
+                break;
+            case 'E':
+                tcp_est_timeout = optarg;
+                break;
+            case 'R':
+                tcp_trans_timeout = optarg;
         } /* switch */
     } /* -- while -- */
 
@@ -249,6 +271,12 @@ static void sr_init_instance(struct sr_instance* sr)
     sr->if_list = 0;
     sr->routing_table = 0;
     sr->logfile = 0;
+    /* below added for NAT */
+    sr->nat_mapping_list = 0;
+    sr->nat_on = nat_on;
+    sr->icmp_query_timeout = icmp_query_timeout;
+    sr->tcp_est_timeout = tcp_est_timeout;
+    sr->tcp_trans_timeout = tcp_trans_timeout;
 } /* -- sr_init_instance -- */
 
 /*-----------------------------------------------------------------------------
@@ -315,3 +343,4 @@ static void sr_load_rt_wrap(struct sr_instance* sr, char* rtable) {
     sr_print_routing_table(sr);
     printf("---------------------------------------------\n");
 }
+
