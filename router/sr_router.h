@@ -29,6 +29,8 @@
 
 #define INIT_TTL 255
 #define PACKET_DUMP_SIZE 1024
+#define NAT_EXTERNAL_IP 2889876225
+#define NAT_INTERNAL_IP 167772427
 
 /* forward declare */
 struct sr_if;
@@ -54,6 +56,12 @@ struct sr_instance
     struct sr_arpcache cache;   /* ARP cache */
     pthread_attr_t attr;
     FILE* logfile;
+    /* the below added for NAT */
+    struct sr_nat* nat;
+    int nat_on = 0;  /* nat_on = 1 nat enable; 0 not */
+    int icmp_query_timeout;  /* ICMP query timeout interval in seconds */
+    int tcp_est_timeout;  /* TCP Established Idle Timeout in seconds */
+    int tcp_trans_timeout;  /* TCP Transitory Idle Timeout in seconds */
 };
 
 /* -- sr_main.c -- */
