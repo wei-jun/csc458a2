@@ -29,8 +29,6 @@
 
 #define INIT_TTL 255
 #define PACKET_DUMP_SIZE 1024
-#define NAT_EXTERNAL_IP 2889876225
-#define NAT_INTERNAL_IP 167772427
 
 /* forward declare */
 struct sr_if;
