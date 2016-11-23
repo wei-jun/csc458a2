@@ -54,6 +54,12 @@ struct sr_instance
     struct sr_arpcache cache;   /* ARP cache */
     pthread_attr_t attr;
     FILE* logfile;
+    /* the below added for NAT */
+    struct sr_nat_mapping* nat_mapping_list;
+    int nat = 0;  /* nat = 1 nat enable; 0 not */
+    int icmp_query_timeout;
+    int tcp_est_timeout;
+    int tcp_trans_timeout;
 };
 
 /* -- sr_main.c -- */
