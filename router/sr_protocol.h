@@ -102,8 +102,6 @@ struct sr_icmp_t3_hdr {
 typedef struct sr_icmp_t3_hdr sr_icmp_t3_hdr_t;
 
 
-
-
 /*
  * Structure of an internet header, naked of options.
  */
@@ -132,6 +130,34 @@ struct sr_ip_hdr
     uint32_t ip_src, ip_dst;	/* source and dest address */
   } __attribute__ ((packed)) ;
 typedef struct sr_ip_hdr sr_ip_hdr_t;
+
+
+/*
+ * Structure of a tcp header, naked of options.
+ */
+struct sr_tcp_hdr
+  {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    unsigned int ip_hl:4;   /* header length */
+    unsigned int ip_v:4;    /* version */
+#elif __BYTE_ORDER == __BIG_ENDIAN
+    unsigned int ip_v:4;    /* version */
+    unsigned int ip_hl:4;   /* header length */
+#else
+#error "Byte ordering ot specified " 
+#endif 
+    uint16_t src_port;     /* source port */
+    uint16_t dest_port;      /* destination port */
+    uint32_t seq_num;     /* sequence number */
+    uint32_t ack;      /* acknowledgment */
+
+    uint8_t hdr_len;     /* header length */
+    uint8_t flag;     /* Flags */
+    uint16_t adv_window;      /* advertised window */
+    uint16_t checksum;      /* checksum */
+    uint16_t urg_pointer;  /* urgent pointer */
+  } __attribute__ ((packed)) ;
+typedef struct sr_tcp_hdr sr_tcp_hdr_t;
 
 /* 
  *  Ethernet packet header prototype.  Too many O/S's define this differently.
