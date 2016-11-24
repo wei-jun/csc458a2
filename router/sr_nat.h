@@ -14,7 +14,8 @@ typedef enum {
 
 struct sr_nat_connection {
   /* add TCP connection state data members here */
-
+  time_t created;
+  time_t closed;
   struct sr_nat_connection *next;
 };
 

@@ -58,24 +58,37 @@ void *sr_nat_timeout(void *nat_ptr) {  /* Periodic Timout handling */
     pthread_mutex_lock(&(nat->lock));
     time_t curtime = time(NULL);
     /* handle periodic tasks here */
-    struct sr_nat_mapping* map = nat -> mappings; 
-    struct sr_nat_mapping* top = map;
+    struct sr_nat_mapping* map; 
+    struct sr_nat_mapping* prev = NULL;
     struct sr_nat_mapping* next = NULL;
-    while(map -> != NULL){
-      /*handle imcp*/
-      struct sr_nat_mapping* next =  map->next;
-      if(map -> type == nat_mapping_icmp){
-        if(difftime(curtime, map->last_updated) >= 60){
-           next = map -> next;
-           
-
-          /* free imcp mappings */
-
-
+    for(map = nat-> mappings; map != NULL; map = map->next){
+      /* handle imcp timeout*/
+      if(map->type == nat_mapping_icmp && difftime(curtime, map->last_updated) >= 60.0){
+        /* free mapping in the middle of linked list*/
+        if(prev){
+          next = map->next;
+          prev->next = next;
+          free(map);
         }
-          
+        /* free top of the linked list*/
+        else{
+          next = map->next;
+          nat->mapping = next;
+          free(map);
+        }
+        break;
       }
+      /* handle tcp timeout*/
+      else if(){
+
+
+
+      }
+
+      prev = map;
+
     }
+
     pthread_mutex_unlock(&(nat->lock));
   }
   return NULL;
@@ -91,7 +104,7 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
 
   /* handle lookup here, malloc and assign to copy */
   struct sr_nat_mapping *current = nat->mappings;
-  struct sr_nat_mapping *copy = (struct sr_nat_mapping*) malloc (sizeof struct sr_nat_mapping);
+  struct sr_nat_mapping *copy = (struct sr_nat_mapping*) malloc (sizeof (struct sr_nat_mapping));
   while(current != NULL){
     if(current->type==type && current->aux_ext==aux_ext){
       copy->type = current->type;
@@ -100,7 +113,7 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
       copy->aux_int = current->aux_int;
       copy->aux_ext =current->aux_ext;
       copy->last_updated = current->last_updated;
-      struct sr_nat_connection *connection = (struct sr_nat_connection*) malloc(sizeof struct sr_nat_connection);
+      struct sr_nat_connection *connection = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
       connection = current -> conns;
       copy->conns = connection;
       copy->next = NULL;
@@ -121,7 +134,7 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
 
   /* handle lookup here, malloc and assign to copy. */
   struct sr_nat_mapping *current = nat->mappings;
-  struct sr_nat_mapping *copy = (struct sr_nat_mapping*) malloc (sizeof(struct sr_nat_mapping));
+  struct sr_nat_mapping *copy = (struct sr_nat_mapping*)malloc(sizeof(struct sr_nat_mapping));
   while(current != NULL){
     if(current->type==type && current->aux_int==aux_int && current->ip_int=ip_int){
       copy->type = current->type;
@@ -151,7 +164,7 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   pthread_mutex_lock(&(nat->lock));
 
   /* handle insert here, create a mapping, and then return a copy of it */
-  struct sr_nat_mapping *mapping = (struct sr_nat_mapping*) malloc (sizeof (struct sr_nat_mapping));
+  struct sr_nat_mapping *mapping = (struct sr_nat_mapping*)malloc(sizeof (struct sr_nat_mapping));
   struct sr_nat_mapping *current = nat->mappings;
 
   /*loop to the end of list and get the largest external port number */
@@ -164,32 +177,32 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   }
   /* create a new external prot number*/
   port = port + 1;
+
   /*make sure port is unique*/
   while(port == aux_int){
     prot++;
   }
+
   /* update new mapping data */
-  mapping -> type = type;
-  mapping -> ip_int = ip_int;
-  mapping -> ip_ext = NULL;
-  mapping -> aux_int = aux_int;
-  mapping -> aux_ext = port;
+  mapping->type = type;
+  mapping->ip_int = ip_int;
+  mapping->ip_ext = NULL;
+  mapping->aux_int = aux_int;
+  mapping->aux_ext = port;
   time_t now = time(NULL);
-  mapping -> last_updated = now;
+  mapping->last_updated = now;
   /* handle icmp */
   if(type == nat_mapping_icmp){
-    mapping -> conns = NULL;
+    mapping->conns = NULL;
   }
   /* handle tcp */
   else{
 
   }
   
-  mapping - > next = NULL;
+  mapping->next = NULL;
   /* insert new mapping into nat*/
   current = mapping;
-
-  
 
   pthread_mutex_unlock(&(nat->lock));
   return mapping;
