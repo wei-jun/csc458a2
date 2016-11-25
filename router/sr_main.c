@@ -116,18 +116,25 @@ int main(int argc, char **argv)
                 nat_on = 1;
                 break;
             case 'I':
-                icmp_query_timeout = optarg;
+                icmp_query_timeout = atoi(optarg);
                 break;
             case 'E':
-                tcp_est_timeout = optarg;
+                tcp_est_timeout = atoi(optarg);
                 break;
             case 'R':
-                tcp_trans_timeout = optarg;
+                tcp_trans_timeout = atoi(optarg);
         } /* switch */
     } /* -- while -- */
 
     /* -- zero out sr instance -- */
     sr_init_instance(&sr);
+    /* added for NAT */
+    sr.nat = 0;
+    sr.nat_on = nat_on;
+    sr.icmp_query_timeout = icmp_query_timeout;
+    sr.tcp_est_timeout = tcp_est_timeout;
+    sr.tcp_trans_timeout = tcp_trans_timeout;
+    /* NAT */
 
     /* -- set up routing table from file -- */
     if(template == NULL) {
@@ -271,12 +278,6 @@ static void sr_init_instance(struct sr_instance* sr)
     sr->if_list = 0;
     sr->routing_table = 0;
     sr->logfile = 0;
-    /* below added for NAT */
-    sr->nat_mapping_list = 0;
-    sr->nat_on = nat_on;
-    sr->icmp_query_timeout = icmp_query_timeout;
-    sr->tcp_est_timeout = tcp_est_timeout;
-    sr->tcp_trans_timeout = tcp_trans_timeout;
 } /* -- sr_init_instance -- */
 
 /*-----------------------------------------------------------------------------
