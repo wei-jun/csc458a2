@@ -23,7 +23,8 @@
 #include "sr_router.h"
 #include "sr_protocol.h"
 #include "sr_arpcache.h"
-#include "sr_utils.h" 
+#include "sr_utils.h"
+#include "sr_nat.h"
 
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
@@ -214,13 +215,55 @@ void sr_handle_arp_reply(struct sr_instance* sr,
       ethernet_hdr = (sr_ethernet_hdr_t *)(pkt->buf);
       memcpy(ethernet_hdr->ether_dhost, arp_hdr->ar_sha, ETHER_ADDR_LEN);
       memcpy(ethernet_hdr->ether_shost, o_iface->addr, ETHER_ADDR_LEN);
-        
+      
       /* update ip header */
-
       ip_hdr = (struct sr_ip_hdr *)(pkt->buf + sizeof(struct sr_ethernet_hdr));
-
       ip_hdr->ip_ttl--;
       bzero(&(ip_hdr->ip_sum), 2);
+      
+      /* Send packet with NAT.*/
+      if (sr->nat_on == 1) {
+	/* If it's an ICMP packet*/
+	if (ip_hdr->ip_p == ip_protocol_icmp) {
+	  sr_icmp_hdr_t *icmp_hdr;
+	  icmp_hdr = (sr_icmp_hdr_t *)(pkt->buf + sizeof(struct sr_ethernet_hdr)
+	    + sizeof(struct sr_ip_hdr));
+	  
+	  /* If it's an ICMP echo request*/
+	  if (icmp_hdr->icmp_type == 8) {
+	    uint16_t *aux_src_int;
+	    uint32_t *ip_src_int;
+	    ip_src_int = &(ip_hdr->ip_src);
+	    aux_src_int = (uint16_t *)(pkt->buf + sizeof(struct sr_ethernet_hdr) 
+	      + sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
+	    struct sr_nat_mapping *nat_mapping;
+	    nat_mapping = sr_nat_lookup_internal(sr->nat, *ip_src_int, 
+						 *aux_src_int, nat_mapping_icmp);
+	    
+	    /* Create new mapping if existing mapping not found.*/
+	    if (!nat_mapping) {
+	      nat_mapping = sr_nat_insert_mapping(sr->nat, *ip_src_int, 
+						 *aux_src_int, nat_mapping_icmp);
+	    }
+	    
+	    ip_hdr->ip_src = nat_mapping->ip_ext;
+	    
+	    /* update icmp query id */
+	    sr_icmp_hdr_t *icmp_hdr_new;
+	    icmp_hdr_new = (sr_icmp_hdr_t *)(pkt->buf + 
+	      sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_ip_hdr));
+	    uint16_t *icmp_id;
+	    icmp_id = (uint16_t *)(pkt->buf + sizeof(struct sr_ethernet_hdr) + 
+	      sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
+	    *icmp_id = nat_mapping->aux_ext;
+	    bzero(&(icmp_hdr_new->icmp_sum), 2);
+	    uint16_t icmp_cksum = cksum(icmp_hdr_new, len - 
+	      sizeof(struct sr_ethernet_hdr) - sizeof(struct sr_ip_hdr));
+	    icmp_hdr_new->icmp_sum = icmp_cksum;
+	  }
+	}
+      }
+      
       uint16_t ip_cksum = cksum(ip_hdr, sizeof(struct sr_ip_hdr));
       ip_hdr->ip_sum = ip_cksum;
 
@@ -290,7 +333,7 @@ int sr_handle_ip_pkt(struct sr_instance* sr,
 } /* end sr_handle_ip_pkt */
 
 
-/* handle icmp message */
+/* handle icmp echo request to me */
 int sr_handle_pkt_for_me(struct sr_instance* sr,
         uint8_t * packet,
         unsigned int len,
@@ -492,77 +535,153 @@ void sr_forward_ip_pkt(struct sr_instance* sr,
     /* If it's an ICMP packet*/
     if (ip_hdr->ip_p == ip_protocol_icmp) {
       sr_icmp_hdr_t *icmp_hdr;
-      icmp_hdr = (sr_icmp_hdr_t *)(packet + sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_ip_hdr));
+      icmp_hdr = (sr_icmp_hdr_t *)(packet + sizeof(struct sr_ethernet_hdr) + 
+	sizeof(struct sr_ip_hdr));
       
       /* If it's an ICMP echo request*/
       if (icmp_hdr->icmp_type == 8) {
-	uint16_t aux_src_int;
-	aux_src_int = (uint16_t)(packet + sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
-	struct sr_nat_mapping *nat_mapping;
-	nat_mapping = nat_lookup_internal(sr->nat, ip_src_int, aux_src_int, nat_mapping_icmp);
 	
-	/* NAT mapping from internal to external for source is found.*/
-	if (nat_mapping) {  
-	  struct sr_if* o_iface = sr_get_interface(sr, nat_mapping->ip_ext);
+	/* lookup the longest prefix match */
+	struct sr_rt *rtable = sr_longest_prefix_match(sr, ip_dest);
+
+	/* if no match, icmp net unreachable */
+	if (! rtable->gw.s_addr) {
+	  sr_icmp_dest_unreachable(sr, packet, len, interface, 3, 0);
+	  return;
+	}
+	
+	/* match */
+	else {
+	  uint16_t *aux_src_int;
+	  aux_src_int = (uint16_t *)(packet + sizeof(struct sr_ethernet_hdr) + 
+	    sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
+	  struct sr_nat_mapping *nat_mapping;
+	  nat_mapping = sr_nat_lookup_internal(sr->nat, ip_src_int, 
+					      *aux_src_int, nat_mapping_icmp);
+	  
+	  /* Create new mapping if existing mapping not found.*/
+	  if (!nat_mapping) {
+	    nat_mapping = sr_nat_insert_mapping(sr->nat, ip_src_int, 
+					*aux_src_int, nat_mapping_icmp);
+	  }
+	  
+	  struct sr_if* o_iface = sr_get_interface(sr, rtable->interface);
 	  assert(o_iface);
+
+	  /* make a copy of the packet */
+	  uint8_t *sr_pkt = (uint8_t *)malloc(len);
+	  memcpy(sr_pkt, packet, len);
+
+	  /* check arp cache for next hop mac */
+	  struct sr_arpentry *arp_entry; 
+	  arp_entry = sr_arpcache_lookup(&(sr->cache), rtable->gw.s_addr);
+
+	  /*arp cache hit */
+	  if (arp_entry) {
+	    /* update ethernet header */
+	    ethernet_hdr = (sr_ethernet_hdr_t *)sr_pkt;
+	    memcpy(ethernet_hdr->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN); 
+	    memcpy(ethernet_hdr->ether_shost, o_iface->addr, ETHER_ADDR_LEN); 
+	  
+	    /* update ip header */
+	    ip_hdr = (sr_ip_hdr_t *)(sr_pkt + sizeof(struct sr_ethernet_hdr));
+	    ip_hdr->ip_ttl--;
+	    ip_hdr->ip_src = nat_mapping->ip_ext;
+	    bzero(&(ip_hdr->ip_sum), 2);  
+	    uint16_t ip_cksum = cksum(ip_hdr, 4*(ip_hdr->ip_hl));
+	    ip_hdr->ip_sum = ip_cksum;
+	    
+	    /* update icmp query id */
+	    sr_icmp_hdr_t *icmp_hdr_new;
+	    icmp_hdr_new = (sr_icmp_hdr_t *)(sr_pkt + 
+	      sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_ip_hdr));
+	    uint16_t *icmp_id;
+	    icmp_id = (uint16_t*)(sr_pkt + sizeof(struct sr_ethernet_hdr) + 
+	      sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
+	    *icmp_id = nat_mapping->aux_ext;
+	    bzero(&(icmp_hdr_new->icmp_sum), 2);
+	    uint16_t icmp_cksum = cksum(icmp_hdr_new, len - 
+	      sizeof(struct sr_ethernet_hdr) - sizeof(struct sr_ip_hdr));
+	    icmp_hdr_new->icmp_sum = icmp_cksum;
+
+	    /* send frame to next hop */
+	    printf("Send packet:\n");
+	    print_hdrs(sr_pkt, len);
+	    sr_send_packet(sr, sr_pkt, len, rtable->interface);
+	    free(arp_entry);
+	  }    
+	  /* arp miss */
+	  else {
+	    sr_arpcache_queuereq(&(sr->cache), rtable->gw.s_addr, packet, len, 
+				 rtable->interface);
+	  }
+	  free(sr_pkt);
+	  free(rtable);  
 	}
       }
+      /* If it's an ICMP echo reply*/
+      else if (icmp_hdr->icmp_type == 0) {
+	
+      }
     }
-    else if (ip_hdr->ip_p == ip) {
+    
+    /* If it's a TCP packet*/
+    else if (ip_hdr->ip_p == ip_protocol_tcp) {
       
     }
   }
-    
-  /* lookup the longest prefix match */
-  struct sr_rt *rtable = sr_longest_prefix_match(sr, ip_dest);
+  
+  /* Routing without NAT. */
+  else{
+    /* lookup the longest prefix match */
+    struct sr_rt *rtable = sr_longest_prefix_match(sr, ip_dest);
 
-  /* if no match, icmp net unreachable */
-  if (! rtable->gw.s_addr) {
-    sr_icmp_dest_unreachable(sr, packet, len, interface, 3, 0);
-    return;
-  }
-  /* match */
-  else {   
-    struct sr_if* o_iface = sr_get_interface(sr, rtable->interface);
-    assert(o_iface);
-
-    /* make a copy of the packet */
-    uint8_t *sr_pkt = (uint8_t *)malloc(len);
-    memcpy(sr_pkt, packet, len);
-
-    /* check arp cache for next hop mac */
-    struct sr_arpentry *arp_entry; 
-    arp_entry = sr_arpcache_lookup(&(sr->cache), rtable->gw.s_addr);
-
-    /*arp cache hit */
-    if (arp_entry) {
-      /* update ethernet header */
-      ethernet_hdr = (sr_ethernet_hdr_t *)sr_pkt;
-      memcpy(ethernet_hdr->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN); 
-      memcpy(ethernet_hdr->ether_shost, o_iface->addr, ETHER_ADDR_LEN); 
-    
-      /* update ip header */
-      ip_hdr = (sr_ip_hdr_t *)(sr_pkt + sizeof(struct sr_ethernet_hdr));
-      ip_hdr->ip_ttl--;
-      bzero(&(ip_hdr->ip_sum), 2);  
-      uint16_t ip_cksum = cksum(ip_hdr, 4*(ip_hdr->ip_hl));
-      ip_hdr->ip_sum = ip_cksum;      
-
-      /* send frame to next hop */
-      printf("Send packet:\n");
-      print_hdrs(sr_pkt, len);
-      sr_send_packet(sr, sr_pkt, len, rtable->interface);
-      free(arp_entry);
-    }    
-    /* arp miss */
-    else {
-      sr_arpcache_queuereq(&(sr->cache), rtable->gw.s_addr, packet, len, rtable->interface);
+    /* if no match, icmp net unreachable */
+    if (! rtable->gw.s_addr) {
+      sr_icmp_dest_unreachable(sr, packet, len, interface, 3, 0);
+      return;
     }
-    free(sr_pkt);
-    free(rtable);
+    /* match */
+    else {   
+      struct sr_if* o_iface = sr_get_interface(sr, rtable->interface);
+      assert(o_iface);
+
+      /* make a copy of the packet */
+      uint8_t *sr_pkt = (uint8_t *)malloc(len);
+      memcpy(sr_pkt, packet, len);
+
+      /* check arp cache for next hop mac */
+      struct sr_arpentry *arp_entry; 
+      arp_entry = sr_arpcache_lookup(&(sr->cache), rtable->gw.s_addr);
+
+      /*arp cache hit */
+      if (arp_entry) {
+	/* update ethernet header */
+	ethernet_hdr = (sr_ethernet_hdr_t *)sr_pkt;
+	memcpy(ethernet_hdr->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN); 
+	memcpy(ethernet_hdr->ether_shost, o_iface->addr, ETHER_ADDR_LEN); 
+      
+	/* update ip header */
+	ip_hdr = (sr_ip_hdr_t *)(sr_pkt + sizeof(struct sr_ethernet_hdr));
+	ip_hdr->ip_ttl--;
+	bzero(&(ip_hdr->ip_sum), 2);  
+	uint16_t ip_cksum = cksum(ip_hdr, 4*(ip_hdr->ip_hl));
+	ip_hdr->ip_sum = ip_cksum;  
+
+	/* send frame to next hop */
+	printf("Send packet:\n");
+	print_hdrs(sr_pkt, len);
+	sr_send_packet(sr, sr_pkt, len, rtable->interface);
+	free(arp_entry);
+      }    
+      /* arp miss */
+      else {
+	sr_arpcache_queuereq(&(sr->cache), rtable->gw.s_addr, packet, len, rtable->interface);
+      }
+      free(sr_pkt);
+      free(rtable);
     }
   }
-}
 
   return;
 } /* end sr_forward_ip_pkt */
@@ -586,23 +705,5 @@ struct sr_rt *sr_longest_prefix_match(struct sr_instance* sr, uint32_t ip)
 
   return rtable;
 } /* end sr_longest_prefix_match */
-
-/* Find next hop's IP in routing table.
- * Input: routing table, outgoing interface's ip.
- * Ouput: next hop's IP.
-*/
-struct uint32_t sr_next_hop_ip(struct sr_instance* sr, char interface)
-{
-  assert(sr);
-  assert(iface_ip);
-
-  struct sr_rt *rt;
-  for (rt = sr->routing_table; rt != NULL; rt = rt->next) {
-    if (strcmp(rt->interface, interface) == 0) {
-      return rt->gw.s_addr;     
-    }
-  }
-} /* end sr_next_hop_ip */
-
 
 
