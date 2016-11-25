@@ -14,8 +14,11 @@ typedef enum {
 
 struct sr_nat_connection {
   /* add TCP connection state data members here */
-  time_t created;
-  time_t closed;
+  time_t initialized; /*time initialize a tcp session*/
+  Boolean status; /* it is closed or open*/
+  int sequence; /*sequences number of TCP packets*/
+  uint32_t ack; /* acknowledgment */
+
   struct sr_nat_connection *next;
 };
 
@@ -33,6 +36,9 @@ struct sr_nat_mapping {
 
 
 struct sr_nat {
+  /* bitmap for port number 
+  int bitmap[1000];
+  */
   /* add any fields here */
   struct sr_nat_mapping *mappings;
   /* threading */
