@@ -24,6 +24,11 @@ int sr_nat_init(struct sr_nat *nat) { /* Initializes the nat */
   nat->mappings = NULL;
   /* Initialize any variables here */
 
+  /* initialize bitmap for ports number
+  for(int i=0; i<=1000; i++){
+    nat->bitmap[i] = 0;
+  }
+  */
   return success;
 }
 
@@ -41,6 +46,9 @@ int sr_nat_destroy(struct sr_nat *nat) {  /* Destroys the nat (free memory) */
       free(connection);
       connection = next_conns;
     }
+    /*update bitmap
+    nat->bitmap[current->aux_ext - 2000] = 0;
+    */
     /*free current sr_nat_mapping*/
     free(current);
     current = next;
@@ -68,12 +76,18 @@ void *sr_nat_timeout(void *nat_ptr) {  /* Periodic Timout handling */
         if(prev){
           next = map->next;
           prev->next = next;
+          /*update bitmap
+          nat->bitmap[map->aux_ext -2000] = 0;
+          */
           free(map);
         }
         /* free top of the linked list*/
         else{
           next = map->next;
           nat->mapping = next;
+          /*update bitmap
+          nat->bitmap[map->aux_ext -2000] = 0;
+          */
           free(map);
         }
         break;
@@ -167,21 +181,18 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   struct sr_nat_mapping *mapping = (struct sr_nat_mapping*)malloc(sizeof (struct sr_nat_mapping));
   struct sr_nat_mapping *current = nat->mappings;
 
+  
+
   /*loop to the end of list and get the largest external port number */
   int port = 1024;
   while(current != NULL){
     if(port < current -> aux_ext){
-      port = current -> aux_ext;
+      port = current->aux_ext;
     }
     current = current -> next;
   }
-  /* create a new external prot number*/
+  /* create a new external port number */
   port = port + 1;
-
-  /*make sure port is unique*/
-  while(port == aux_int){
-    prot++;
-  }
 
   /* update new mapping data */
   mapping->type = type;
@@ -195,8 +206,9 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   if(type == nat_mapping_icmp){
     mapping->conns = NULL;
   }
+
   /* handle tcp */
-  else{
+  else if(type == nat_mapping_tcp){
 
   }
   
@@ -207,3 +219,21 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   pthread_mutex_unlock(&(nat->lock));
   return mapping;
 }
+
+
+
+
+/*check produce an unused ports number staring from 2000 */
+int produce_port_num(struct sr_nat *nat){
+  int *list = nat->ports;
+  for(int i= 0; i < 1000 i++){
+    if(nat->bitmap[i] == 0){
+      /*update bitmap*/
+      nat->bitmap[i] == 1;
+      /*return the port number*/
+      return i+2000;
+    }
+  }
+  return 0;
+}
+
