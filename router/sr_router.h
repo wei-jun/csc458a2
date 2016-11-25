@@ -56,7 +56,7 @@ struct sr_instance
     FILE* logfile;
     /* the below added for NAT */
     struct sr_nat* nat;
-    int nat_on = 0;  /* nat_on = 1 nat enable; 0 not */
+    int nat_on;  /* nat_on = 1 nat enable; 0 not */
     int icmp_query_timeout;  /* ICMP query timeout interval in seconds */
     int tcp_est_timeout;  /* TCP Established Idle Timeout in seconds */
     int tcp_trans_timeout;  /* TCP Transitory Idle Timeout in seconds */

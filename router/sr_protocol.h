@@ -88,7 +88,7 @@ struct sr_icmp_hdr {
 typedef struct sr_icmp_hdr sr_icmp_hdr_t;
 
 
-/* Structure of a type3 ICMP header
+/* Structure of a type 3 ICMP header
  */
 struct sr_icmp_t3_hdr {
   uint8_t icmp_type;
@@ -100,6 +100,18 @@ struct sr_icmp_t3_hdr {
 
 } __attribute__ ((packed)) ;
 typedef struct sr_icmp_t3_hdr sr_icmp_t3_hdr_t;
+
+/* Structure of a type 8 ICMP header
+ */
+struct sr_icmp_t8_hdr {
+  uint8_t icmp_type;
+  uint8_t icmp_code;
+  uint16_t icmp_sum;
+  uint16_t icmp_id;
+  uint16_t icmp_seq_num;
+
+} __attribute__ ((packed)) ;
+typedef struct sr_icmp_t8_hdr sr_icmp_t8_hdr_t;
 
 
 /*
@@ -178,6 +190,7 @@ typedef struct sr_ethernet_hdr sr_ethernet_hdr_t;
 
 enum sr_ip_protocol {
   ip_protocol_icmp = 0x0001,
+  ip_protocol_tcp = 0x0006,
 };
 
 enum sr_ethertype {
