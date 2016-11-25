@@ -14,10 +14,11 @@ typedef enum {
 
 struct sr_nat_connection {
   /* add TCP connection state data members here */
-  time_t Initialized; /*time initialize a tcp session*/
+  time_t initialized; /*time initialize a tcp session*/
   Boolean status; /* it is closed or open*/
-  int sequence; /*sequences of TCP packets*/
-  
+  int sequence; /*sequences number of TCP packets*/
+  uint32_t ack; /* acknowledgment */
+
   struct sr_nat_connection *next;
 };
 
