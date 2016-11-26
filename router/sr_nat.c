@@ -22,18 +22,18 @@ int sr_nat_init(struct sr_nat *nat) { /* Initializes the nat */
   pthread_create(&(nat->thread), &(nat->thread_attr), sr_nat_timeout, nat);
   /* CAREFUL MODIFYING CODE ABOVE THIS LINE! */
   nat->mappings = NULL;
-  
+
   /* initialize internal ip address and external interface ip address of NAT */
   struct in_addr ipvalue1, ipvalue2;
   uint32_t out_ip, in_ip;
-  inet_pton(AF_INET, "172.64.3.1", &ipvalue1);
+  inet_pton(AF_INET, "172.64.3.10", &ipvalue1);
   out_ip = ipvalue1.s_addr;
   inet_pton(AF_INET, "10.0.1.11", &ipvalue2);
   in_ip = ipvalue2.s_addr;
   nat->out_interface=out_ip;
   nat->in_interface=in_ip;
   /* Initialize any variables here */
-  
+
   return success;
 }
 
@@ -188,6 +188,7 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
   return copy;
 }
 
+
 /* Insert a new mapping into the nat's mapping table.
    Actually returns a copy to the new mapping, for thread safety.
  */
@@ -210,7 +211,6 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   }
   /* create a new external port number */
   port = port + 1;
-
   /* update new mapping data */
   mapping->type = type;
   mapping->ip_int = ip_int;
@@ -240,7 +240,7 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
 
 
 
-/* free returned mapping memory
+/* free sr_nat_mapping struct
  */
 int free_memory(struct sr_nat_mapping* map){
   if(map != NULL){
