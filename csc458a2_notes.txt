@@ -1,0 +1,38 @@
+ICMP Echo Request
+  - 1st 4 bytes of ICMP echo request = 16-bit query identifier + 16-bit sequence number
+  - combination of query identifier and sequence number globally unique
+  - mapping between a globally identifier and the corresponding internal address and internal identifier.
+  - REQUIREMENTS:
+    - translate ICMP echo requests from internal address to external address
+    - translate ICMP echo reply
+    - echo requests must be external host independent: two requests from the same internal host with the same query identifier to different external hosts MUST have the same external identifier.
+    - ICMP query mapping MUST NOT expire less than 60 seconds after its last use.
+  - Maintain previous functionality (e.g. Responding to an ECHO request from an external host addressed to the NAT's external interface)
+
+
+TCP Connections
+  - INTERNAL host opens a TCP connection to an external host
+    - rewrite the packet (REMEMBER to update checksum over the pseudo-header, tcp header, and payload) so that it appears as if it is coming from the NAT's external address.
+    - allocating a globally unique port.
+    - REQUIREMENTS:
+      - Endpoint-Independent Mapping: (X1':x1') equals (X2':x2') for all values of (Y2:y2).
+      - handle TCP simultaneous-open mode of connection initiation.
+      - Endpoint-Independent Filtering: If a NAT allows the connection initiation from all (Y2:y2).
+      - NAT MUST NOT respond to an unsolicited inbound SYN packet for at least 6 seconds after the packet is received. 
+	- If during the interval the NAT receives and translates an outbound SYN for the connection, the NAT MUST silently drop the original unsolicited inbound SYN packet.
+	- Otherwise, the NAT MUST send an ICMP Port Unreachable error (Type 3, Code 3) for the original SYN.
+	- If NAT cannot determine whether the endpoints of the TCP connection are active, it MUST abandon the session if it has been idle for some time. 
+	  - In such cases, the value of the "established connection idle-timeout" MUST NOT be less than 2 hours 4 minutes: the minimum time a TCP connection in the established phase must remain idle before the NAT considers the associated session a candidate for removal. ACKs in both directions mark the beginning of the established phase where application data can be exchanged indefinitely. (TCP states: ESTABLISHED, FIN_WAIT_1, FIN_WAIT_2, and CLOSE_WAIT)
+	  - The value of the "transitory connection idle-timeout" MUST NOT be less than 4 minutes: the minimum time a TCP connection in the partially open or closing phases must remain idle before the NAT considers the associated session a candidate for removal. (TCP states: SYN_SENT and SYN_RCVD. CLOSING and LAST_ACK)
+      - NAT MUST NOT have a "Port assignment" behaviour of "Port overloading" for TCP: MUST NOT allow different internal endpoints to simultaneously use the same mapping.
+      
+
+Mappings
+  - Do not use well-known ports (0-1023)
+  - Cleaning up defunct mappings:
+    - NAT must periodically timeout both defunct ICMP query sessions and idle TCP connections. Once all connections using a particular mapping are closed or timed out, the mapping should be cleared. Once cleared, a mapping can be reused in new connections.
+      - The periodic function that handles timeouts should fire in its own separate thread. The following three timeout intervals for mappings should be configurable via command-line flags:
+	- -I INTEGER -- ICMP query timeout interval in seconds (default to 60)
+	- -E INTEGER -- TCP Established Idle TImeout in seconds (default to 7440)
+	- -R INTEGER -- TCP Transitory Idle Timeout in seconds (default to 300)
+    - Note: The intervals should be configurable to times below those minimums so that it's able to be tested in a reasonable time.
