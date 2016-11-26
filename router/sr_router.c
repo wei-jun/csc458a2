@@ -522,27 +522,31 @@ void sr_forward_ip_pkt(struct sr_instance* sr,
 
   ip_hdr = (sr_ip_hdr_t *)(packet + sizeof(struct sr_ethernet_hdr));
   assert(ip_hdr);
-
-  uint32_t ip_dest;
-  ip_dest = ip_hdr->ip_dst;
     
   /* Routing with NAT. */
   if (sr->nat_on == 1) {
     
-    uint32_t ip_src_int;
-    ip_src_int = ip_hdr->ip_src;
+    /* Get the original source and destination ips from packet.*/
+    uint32_t original_ip_src, original_ip_dst;
+    original_ip_src = ip_hdr->ip_src;
+    original_ip_dst = ip_hdr->ip_dst;
       
     /* If it's an ICMP packet*/
     if (ip_hdr->ip_p == ip_protocol_icmp) {
-      sr_icmp_hdr_t *icmp_hdr;
-      icmp_hdr = (sr_icmp_hdr_t *)(packet + sizeof(struct sr_ethernet_hdr) + 
+      
+      /* Get the original icmp query id from packet.*/
+      sr_icmp_hdr_t *original_icmp_hdr;
+      original_icmp_hdr = (sr_icmp_hdr_t *)(packet + sizeof(struct sr_ethernet_hdr) + 
         sizeof(struct sr_ip_hdr));
+      uint16_t *original_icmp_id;
+      original_icmp_id = (uint16_t *)(packet + sizeof(struct sr_ethernet_hdr) + 
+	sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
       
       /* If it's an ICMP echo request*/
-      if (icmp_hdr->icmp_type == 8) {
+      if (original_icmp_hdr->icmp_type == 8) {
 	
       	/* lookup the longest prefix match */
-      	struct sr_rt *rtable = sr_longest_prefix_match(sr, ip_dest);
+      	struct sr_rt *rtable = sr_longest_prefix_match(sr, original_ip_dst);
 
       	/* if no match, icmp net unreachable */
       	if (! rtable->gw.s_addr) {
@@ -552,17 +556,16 @@ void sr_forward_ip_pkt(struct sr_instance* sr,
 	
       	/* match */
       	else {
-      	  uint16_t *aux_src_int;
-      	  aux_src_int = (uint16_t *)(packet + sizeof(struct sr_ethernet_hdr) + 
-      	    sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
-      	  struct sr_nat_mapping *nat_mapping;
-      	  nat_mapping = sr_nat_lookup_internal(sr->nat, ip_src_int, 
-      					      *aux_src_int, nat_mapping_icmp);
       	  
+	  /* Look for nat mapping for corresponding src_ip and src_aux. */
+	  struct sr_nat_mapping *nat_mapping;
+	  nat_mapping = sr_nat_lookup_internal(sr->nat, original_ip_src, 
+					  *original_icmp_id, nat_mapping_icmp);
+	  
       	  /* Create new mapping if existing mapping not found.*/
       	  if (!nat_mapping) {
-      	    nat_mapping = sr_nat_insert_mapping(sr->nat, ip_src_int, 
-      					*aux_src_int, nat_mapping_icmp);
+      	    nat_mapping = sr_nat_insert_mapping(sr->nat, original_ip_src, 
+      					*original_icmp_id, nat_mapping_icmp);
       	  }
       	  
       	  struct sr_if* o_iface = sr_get_interface(sr, rtable->interface);
@@ -620,7 +623,9 @@ void sr_forward_ip_pkt(struct sr_instance* sr,
       	}
       }
       /* If it's an ICMP echo reply*/
-      else if (icmp_hdr->icmp_type == 0) {
+      else if (original_icmp_hdr->icmp_type == 0) {
+	
+	
 	
       }
     }
@@ -633,6 +638,9 @@ void sr_forward_ip_pkt(struct sr_instance* sr,
   
   /* Routing without NAT. */
   else{
+    uint32_t ip_dest;
+    ip_dest = ip_hdr->ip_dst;
+    
     /* lookup the longest prefix match */
     struct sr_rt *rtable = sr_longest_prefix_match(sr, ip_dest);
 
