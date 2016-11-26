@@ -142,6 +142,7 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
   return copy;
 }
 
+
 /* Get the mapping associated with given internal (ip, port) pair.
    You must free the returned structure if it is not NULL. */
 struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
@@ -227,8 +228,8 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   /* handle tcp */
   else if(type == nat_mapping_tcp){
     struct sr_nat_connection* new_conn = (strcut sr_nat_connection*)malloc(sizeof(struct sr_nat_connection));
-    new_conn -> next = NULL;
-    mapping -> conns = new_conn;
+    new_conn->next = NULL;
+    mapping->conns = new_conn;
   }
 
   mapping->next = NULL;
