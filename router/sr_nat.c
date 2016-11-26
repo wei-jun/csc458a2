@@ -33,15 +33,9 @@ int sr_nat_destroy(struct sr_nat *nat) {  /* Destroys the nat (free memory) */
   /* free nat memory here */
   struct sr_nat_mapping* current = nat->mappings;
   while(current != NULL){
-    struct sr_nat* next = current->next;
-    /* free connections in the sr_nat_mapping*/
-    struct sr_nat_connection* connection = current->conns;
-    while(connection != NULL){
-      struct sr_nat_connection* next_conns = connection -> next;
-      free(connection);
-      connection = next_conns;
-    }
-    free(current);
+    struct sr_nat_mapping* next = current->next;
+    /* free sr_nat_mapping*/
+    free_memory(current);
     current = next;
   }
   pthread_kill(nat->thread, SIGKILL);
@@ -235,34 +229,24 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   return mapping;
 }
 
-/*free returned mapping memory*/
 
+
+/* free returned mapping memory
+ */
 int free_memory(struct sr_nat_mapping* map){
-  if(map !=NULL){
-    /*if mapping is imcp*/
-    if(map->type == nat_mapping_icmp){
-      free(map);
+  if(map != NULL){
+    /* free all sr_nap_connections */
+    struct sr_nat_connection* connection = map->conns;
+    struct r_nat_connection* next;
+    while(connection != NULL){
+      next = connection->next;
+      free(connection);
+      connection = next;
     }
-    /*if mapping is tcp*/
-    else if(map->type == nat_mapping_tcp){
-      /* free all sr_nap_connections */
-      struct sr_nat_connection* connection = map->conns;
-      struct r_nat_connection* next;
-      while(connection != NULL){
-        next = connection->next;
-        free(connection);
-        connection = next;
-      }
-      /*free map*/
-      free(map);
-
-    }
-    else{
-      return 1;
-    }
+    free(map);
+    return 1;
   }
-  return 1;
-
+  return 0;
 }
 
 
