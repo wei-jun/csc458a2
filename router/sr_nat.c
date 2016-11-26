@@ -22,6 +22,16 @@ int sr_nat_init(struct sr_nat *nat) { /* Initializes the nat */
   pthread_create(&(nat->thread), &(nat->thread_attr), sr_nat_timeout, nat);
   /* CAREFUL MODIFYING CODE ABOVE THIS LINE! */
   nat->mappings = NULL;
+  
+  /* initialize internal ip address and external interface ip address of NAT */
+  struct in_addr ipvalue1, ipvalue2;
+  uint32_t out_ip, in_ip;
+  inet_pton(AF_INET, "172.64.3.1", &ipvalue1);
+  out_ip = ipvalue1.s_addr;
+  inet_pton(AF_INET, "10.0.1.11", &ipvalue2);
+  in_ip = ipvalue2.s_addr;
+  nat->out_interface=out_ip;
+  nat->in_interface=in_ip;
   /* Initialize any variables here */
   
   return success;
@@ -204,7 +214,7 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   /* update new mapping data */
   mapping->type = type;
   mapping->ip_int = ip_int;
-  mapping->ip_ext = NULL;
+  mapping->ip_ext = nat->out_interface;
   mapping->aux_int = aux_int;
   mapping->aux_ext = port;
   time_t now = time(NULL);
@@ -213,7 +223,6 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   if(type == nat_mapping_icmp){
     mapping->conns = NULL; 
   }
-
   /* handle tcp */
   else if(type == nat_mapping_tcp){
     struct sr_nat_connection* new_conn = (strcut sr_nat_connection*)malloc(sizeof(struct sr_nat_connection));

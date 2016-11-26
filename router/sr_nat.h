@@ -16,6 +16,8 @@ typedef int Boolean;
 #define true 1
 #define false 0
 
+
+
 struct sr_nat_connection {
   /* add TCP connection state data members here */
   time_t initialized; /*time initialize a tcp session*/
@@ -39,10 +41,9 @@ struct sr_nat_mapping {
 
 
 struct sr_nat {
-  /* bitmap for port number 
-  int bitmap[1000];
-  */
   /* add any fields here */
+  uint32_t out_interface;
+  uint32_t in_interface;
   struct sr_nat_mapping *mappings;
   /* threading */
   pthread_mutex_t lock;
