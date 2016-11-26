@@ -12,6 +12,10 @@ typedef enum {
   /* nat_mapping_udp, */
 } sr_nat_mapping_type;
 
+typedef int Boolean;
+#define true 1
+#define false 0
+
 struct sr_nat_connection {
   /* add TCP connection state data members here */
   time_t initialized; /*time initialize a tcp session*/
