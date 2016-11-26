@@ -44,6 +44,10 @@ struct sr_nat {
   int bitmap[1000];
   */
   /* add any fields here */
+  int icmp_query_timeout;  /* ICMP query timeout interval in seconds */
+  int tcp_est_timeout;  /* TCP Established Idle Timeout in seconds */
+  int tcp_trans_timeout;  /* TCP Transitory Idle Timeout in seconds */
+  
   struct sr_nat_mapping *mappings;
   /* threading */
   pthread_mutex_t lock;
