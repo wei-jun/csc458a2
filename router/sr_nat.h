@@ -42,8 +42,14 @@ struct sr_nat_mapping {
 
 struct sr_nat {
   /* add any fields here */
+
+  int icmp_query_timeout;  /* ICMP query timeout interval in seconds */
+  int tcp_est_timeout;  /* TCP Established Idle Timeout in seconds */
+  int tcp_trans_timeout;  /* TCP Transitory Idle Timeout in seconds */
+  
   uint32_t out_interface;
   uint32_t in_interface;
+
   struct sr_nat_mapping *mappings;
   /* threading */
   pthread_mutex_t lock;
