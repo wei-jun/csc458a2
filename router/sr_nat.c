@@ -46,10 +46,6 @@ int sr_nat_destroy(struct sr_nat *nat) {  /* Destroys the nat (free memory) */
       free(connection);
       connection = next_conns;
     }
-    /*update bitmap
-    nat->bitmap[current->aux_ext - 2000] = 0;
-    */
-    /*free current sr_nat_mapping*/
     free(current);
     current = next;
   }
@@ -76,31 +72,23 @@ void *sr_nat_timeout(void *nat_ptr) {  /* Periodic Timout handling */
         if(prev){
           next = map->next;
           prev->next = next;
-          /*update bitmap
-          nat->bitmap[map->aux_ext -2000] = 0;
-          */
           free(map);
         }
         /* free top of the linked list*/
         else{
           next = map->next;
           nat->mapping = next;
-          /*update bitmap
-          nat->bitmap[map->aux_ext -2000] = 0;
-          */
           free(map);
         }
         break;
       }
+
       /* handle tcp timeout*/
       else if(){
-
-
 
       }
 
       prev = map;
-
     }
 
     pthread_mutex_unlock(&(nat->lock));
@@ -118,26 +106,42 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
 
   /* handle lookup here, malloc and assign to copy */
   struct sr_nat_mapping *current = nat->mappings;
-  struct sr_nat_mapping *copy = (struct sr_nat_mapping*) malloc (sizeof (struct sr_nat_mapping));
+  struct sr_nat_mapping *copy; 
   while(current != NULL){
     if(current->type==type && current->aux_ext==aux_ext){
+      copy = (struct sr_nat_mapping*) malloc (sizeof (struct sr_nat_mapping));
       copy->type = current->type;
       copy->ip_int =current->ip_int;
       copy->ip_ext =current->ip_ext;
       copy->aux_int = current->aux_int;
       copy->aux_ext =current->aux_ext;
       copy->last_updated = current->last_updated;
-      struct sr_nat_connection *connection = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
-      connection = current -> conns;
+      struct sr_nat_connection *connection;
+      /*copy tcp connections*/
+      if(current ->conns != NULL) {
+        connection = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
+        memcpy(connection, current->conns, sizeof(struct sr_nat_connection));
+        struct sr_nat_connection *next_conn = current->conns->next;
+        struct sr_nat_connection *result = connection;
+        /*loop over each tcp connection*/
+        while(next_conn != NULL){
+          struct sr_nat_connection *nested = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
+          memcpy(nested, next, sizeof(struct sr_nat_connection));
+          result-> next = nested;
+          result = result-> next;
+          next_conn = next_conn->next;
+        }  
+      }
       copy->conns = connection;
       copy->next = NULL;
-      break;
+      break; 
     }
-    current = current->next;
+     current = current->next;
   }
   pthread_mutex_unlock(&(nat->lock));
   return copy;
 }
+
 
 /* Get the mapping associated with given internal (ip, port) pair.
    You must free the returned structure if it is not NULL. */
@@ -157,12 +161,28 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
       copy->aux_int = current->aux_int;
       copy->aux_ext =current->aux_ext;
       copy->last_updated = current->last_updated;
-      struct sr_nat_connection *connection=(struct sr_nat_connection*)malloc(sizeof(struct sr_nat_connection));
-      connection = current -> conns;
+      struct sr_nat_connection *connection;
+      /*copy tcp connections*/
+      if(current->conns != NULL) {
+        connection = (struct sr_nat_connection*)malloc(sizeof(struct sr_nat_connection));
+        memcpy(connection, current->conns, sizeof(struct sr_nat_connection));
+        struct sr_nat_connection *next_conn = current->conns->next;
+        struct sr_nat_connection *result = connection;
+        /*loop over each tcp connection*/
+        while(next_conn != NULL){
+          struct sr_nat_connection *nested = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
+          memcpy(nested, next, sizeof(struct sr_nat_connection));
+          result-> next = nested;
+          result = result-> next;
+          next_conn = next_conn->next;
+        } 
+      }
+
       copy->conns = connection;
       copy->next = NULL;
-      break;
+      break; 
     }
+
     current = current->next;
   }
   pthread_mutex_unlock(&(nat->lock));
@@ -180,8 +200,6 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   /* handle insert here, create a mapping, and then return a copy of it */
   struct sr_nat_mapping *mapping = (struct sr_nat_mapping*)malloc(sizeof (struct sr_nat_mapping));
   struct sr_nat_mapping *current = nat->mappings;
-
-  
 
   /*loop to the end of list and get the largest external port number */
   int port = 1024;
@@ -204,14 +222,16 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   mapping->last_updated = now;
   /* handle icmp */
   if(type == nat_mapping_icmp){
-    mapping->conns = NULL;
+    mapping->conns = NULL; 
   }
 
   /* handle tcp */
   else if(type == nat_mapping_tcp){
-
+    struct sr_nat_connection* new_conn = (strcut sr_nat_connection*)malloc(sizeof(struct sr_nat_connection));
+    new_conn->next = NULL;
+    mapping->conns = new_conn;
   }
-  
+
   mapping->next = NULL;
   /* insert new mapping into nat*/
   current = mapping;
