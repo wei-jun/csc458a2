@@ -23,12 +23,7 @@ int sr_nat_init(struct sr_nat *nat) { /* Initializes the nat */
   /* CAREFUL MODIFYING CODE ABOVE THIS LINE! */
   nat->mappings = NULL;
   /* Initialize any variables here */
-
-  /* initialize bitmap for ports number
-  for(int i=0; i<=1000; i++){
-    nat->bitmap[i] = 0;
-  }
-  */
+  
   return success;
 }
 
@@ -242,18 +237,4 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
 
 
 
-
-/*check produce an unused ports number staring from 2000 */
-int produce_port_num(struct sr_nat *nat){
-  int *list = nat->ports;
-  for(int i= 0; i < 1000 i++){
-    if(nat->bitmap[i] == 0){
-      /*update bitmap*/
-      nat->bitmap[i] == 1;
-      /*return the port number*/
-      return i+2000;
-    }
-  }
-  return 0;
-}
 
