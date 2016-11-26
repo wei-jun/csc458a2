@@ -223,45 +223,45 @@ void sr_handle_arp_reply(struct sr_instance* sr,
       
       /* Send packet with NAT.*/
       if (sr->nat_on == 1) {
-	/* If it's an ICMP packet*/
-	if (ip_hdr->ip_p == ip_protocol_icmp) {
-	  sr_icmp_hdr_t *icmp_hdr;
-	  icmp_hdr = (sr_icmp_hdr_t *)(pkt->buf + sizeof(struct sr_ethernet_hdr)
-	    + sizeof(struct sr_ip_hdr));
-	  
-	  /* If it's an ICMP echo request*/
-	  if (icmp_hdr->icmp_type == 8) {
-	    uint16_t *aux_src_int;
-	    uint32_t *ip_src_int;
-	    ip_src_int = &(ip_hdr->ip_src);
-	    aux_src_int = (uint16_t *)(pkt->buf + sizeof(struct sr_ethernet_hdr) 
-	      + sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
-	    struct sr_nat_mapping *nat_mapping;
-	    nat_mapping = sr_nat_lookup_internal(sr->nat, *ip_src_int, 
-						 *aux_src_int, nat_mapping_icmp);
-	    
-	    /* Create new mapping if existing mapping not found.*/
-	    if (!nat_mapping) {
-	      nat_mapping = sr_nat_insert_mapping(sr->nat, *ip_src_int, 
-						 *aux_src_int, nat_mapping_icmp);
-	    }
-	    
-	    ip_hdr->ip_src = nat_mapping->ip_ext;
-	    
-	    /* update icmp query id */
-	    sr_icmp_hdr_t *icmp_hdr_new;
-	    icmp_hdr_new = (sr_icmp_hdr_t *)(pkt->buf + 
-	      sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_ip_hdr));
-	    uint16_t *icmp_id;
-	    icmp_id = (uint16_t *)(pkt->buf + sizeof(struct sr_ethernet_hdr) + 
-	      sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
-	    *icmp_id = nat_mapping->aux_ext;
-	    bzero(&(icmp_hdr_new->icmp_sum), 2);
-	    uint16_t icmp_cksum = cksum(icmp_hdr_new, len - 
-	      sizeof(struct sr_ethernet_hdr) - sizeof(struct sr_ip_hdr));
-	    icmp_hdr_new->icmp_sum = icmp_cksum;
-	  }
-	}
+      	/* If it's an ICMP packet*/
+      	if (ip_hdr->ip_p == ip_protocol_icmp) {
+      	  sr_icmp_hdr_t *icmp_hdr;
+      	  icmp_hdr = (sr_icmp_hdr_t *)(pkt->buf + sizeof(struct sr_ethernet_hdr)
+      	    + sizeof(struct sr_ip_hdr));
+      	  
+      	  /* If it's an ICMP echo request*/
+      	  if (icmp_hdr->icmp_type == 8) {
+      	    uint16_t *aux_src_int;
+      	    uint32_t *ip_src_int;
+      	    ip_src_int = &(ip_hdr->ip_src);
+      	    aux_src_int = (uint16_t *)(pkt->buf + sizeof(struct sr_ethernet_hdr) 
+      	      + sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
+      	    struct sr_nat_mapping *nat_mapping;
+      	    nat_mapping = sr_nat_lookup_internal(sr->nat, *ip_src_int, 
+      						 *aux_src_int, nat_mapping_icmp);
+      	    
+      	    /* Create new mapping if existing mapping not found.*/
+      	    if (!nat_mapping) {
+      	      nat_mapping = sr_nat_insert_mapping(sr->nat, *ip_src_int, 
+      						 *aux_src_int, nat_mapping_icmp);
+      	    }
+      	    
+      	    ip_hdr->ip_src = nat_mapping->ip_ext;
+      	    
+      	    /* update icmp query id */
+      	    sr_icmp_hdr_t *icmp_hdr_new;
+      	    icmp_hdr_new = (sr_icmp_hdr_t *)(pkt->buf + 
+      	      sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_ip_hdr));
+      	    uint16_t *icmp_id;
+      	    icmp_id = (uint16_t *)(pkt->buf + sizeof(struct sr_ethernet_hdr) + 
+      	      sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_hdr));
+      	    *icmp_id = nat_mapping->aux_ext;
+      	    bzero(&(icmp_hdr_new->icmp_sum), 2);
+      	    uint16_t icmp_cksum = cksum(icmp_hdr_new, len - 
+      	      sizeof(struct sr_ethernet_hdr) - sizeof(struct sr_ip_hdr));
+      	    icmp_hdr_new->icmp_sum = icmp_cksum;
+      	  }
+      	}
       }
       
       uint16_t ip_cksum = cksum(ip_hdr, sizeof(struct sr_ip_hdr));
