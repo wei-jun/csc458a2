@@ -18,7 +18,6 @@ struct sr_nat_connection {
   Boolean status; /* it is closed or open*/
   int sequence; /*sequences number of TCP packets*/
   uint32_t ack; /* acknowledgment */
-
   struct sr_nat_connection *next;
 };
 

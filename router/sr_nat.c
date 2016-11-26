@@ -127,13 +127,28 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
       copy->aux_int = current->aux_int;
       copy->aux_ext =current->aux_ext;
       copy->last_updated = current->last_updated;
-      struct sr_nat_connection *connection = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
-      connection = current -> conns;
+      struct sr_nat_connection *connection;
+      /*copy tcp connections*/
+      if(current ->conns != NULL) {
+        connection = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
+        memcpy(connection, current->conns, sizeof(struct sr_nat_connection));
+        struct sr_nat_connection *next_conn = current->conns->next;
+        struct sr_nat_connection *result = connection;
+        /*loop over each tcp connection*/
+        while(next_conn != NULL){
+          struct sr_nat_connection *nested = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
+          memcpy(nested, next, sizeof(struct sr_nat_connection));
+          result-> next = nested;
+          result = result-> next;
+          next_conn = next_conn->next;
+        }
+       
+      }
       copy->conns = connection;
       copy->next = NULL;
-      break;
+      break; 
     }
-    current = current->next;
+     current = current->next;
   }
   pthread_mutex_unlock(&(nat->lock));
   return copy;
@@ -157,12 +172,28 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
       copy->aux_int = current->aux_int;
       copy->aux_ext =current->aux_ext;
       copy->last_updated = current->last_updated;
-      struct sr_nat_connection *connection=(struct sr_nat_connection*)malloc(sizeof(struct sr_nat_connection));
-      connection = current -> conns;
+      struct sr_nat_connection *connection;
+      /*copy tcp connections*/
+      if(current->conns != NULL) {
+        connection = (struct sr_nat_connection*)malloc(sizeof(struct sr_nat_connection));
+        memcpy(connection, current->conns, sizeof(struct sr_nat_connection));
+        struct sr_nat_connection *next_conn = current->conns->next;
+        struct sr_nat_connection *result = connection;
+        /*loop over each tcp connection*/
+        while(next_conn != NULL){
+          struct sr_nat_connection *nested = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
+          memcpy(nested, next, sizeof(struct sr_nat_connection));
+          result-> next = nested;
+          result = result-> next;
+          next_conn = next_conn->next;
+        } 
+      }
+
       copy->conns = connection;
       copy->next = NULL;
-      break;
+      break; 
     }
+
     current = current->next;
   }
   pthread_mutex_unlock(&(nat->lock));
@@ -204,7 +235,7 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   mapping->last_updated = now;
   /* handle icmp */
   if(type == nat_mapping_icmp){
-    mapping->conns = NULL;
+    mapping->conns = NULL; 
   }
 
   /* handle tcp */
