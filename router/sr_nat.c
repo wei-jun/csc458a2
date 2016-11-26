@@ -235,6 +235,36 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   return mapping;
 }
 
+/*free returned mapping memory*/
+
+int free_memory(struct sr_nat_mapping* map){
+  if(map !=NULL){
+    /*if mapping is imcp*/
+    if(map->type == nat_mapping_icmp){
+      free(map);
+    }
+    /*if mapping is tcp*/
+    else if(map->type == nat_mapping_tcp){
+      /* free all sr_nap_connections */
+      struct sr_nat_connection* connection = map->conns;
+      struct r_nat_connection* next;
+      while(connection != NULL){
+        next = connection->next;
+        free(connection);
+        connection = next;
+      }
+      /*free map*/
+      free(map);
+
+    }
+    else{
+      return 1;
+    }
+  }
+  return 1;
+
+}
+
 
 
 
