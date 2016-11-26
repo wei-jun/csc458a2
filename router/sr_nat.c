@@ -70,23 +70,37 @@ void *sr_nat_timeout(void *nat_ptr) {  /* Periodic Timout handling */
         /* free mapping in the middle of linked list*/
         if(prev){
           next = map->next;
-          prev->next = next;
-          free(map);
+          prev->next = next;  
         }
         /* free top of the linked list*/
         else{
           next = map->next;
-          nat->mapping = next;
-          free(map);
+          nat->mapping = next; 
         }
+        free_memory(map);
         break;
       }
 
       /* handle tcp timeout*/
       else if(){
+        if(prev){
+          next = map->next;
+          prev->next = next;  
+        }
 
+        else{
+          next = map->next;
+          nat->mapping = next; 
+        }
+
+        free_memory(map);
       }
 
+      else{
+        
+        return NULL;
+
+      }
       prev = map;
     }
 
@@ -229,11 +243,9 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
     new_conn->next = NULL;
     mapping->conns = new_conn;
   }
-
   mapping->next = NULL;
   /* insert new mapping into nat*/
   current = mapping;
-
   pthread_mutex_unlock(&(nat->lock));
   return mapping;
 }
