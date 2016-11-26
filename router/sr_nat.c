@@ -46,10 +46,6 @@ int sr_nat_destroy(struct sr_nat *nat) {  /* Destroys the nat (free memory) */
       free(connection);
       connection = next_conns;
     }
-    /*update bitmap
-    nat->bitmap[current->aux_ext - 2000] = 0;
-    */
-    /*free current sr_nat_mapping*/
     free(current);
     current = next;
   }
@@ -76,31 +72,23 @@ void *sr_nat_timeout(void *nat_ptr) {  /* Periodic Timout handling */
         if(prev){
           next = map->next;
           prev->next = next;
-          /*update bitmap
-          nat->bitmap[map->aux_ext -2000] = 0;
-          */
           free(map);
         }
         /* free top of the linked list*/
         else{
           next = map->next;
           nat->mapping = next;
-          /*update bitmap
-          nat->bitmap[map->aux_ext -2000] = 0;
-          */
           free(map);
         }
         break;
       }
+
       /* handle tcp timeout*/
       else if(){
-
-
 
       }
 
       prev = map;
-
     }
 
     pthread_mutex_unlock(&(nat->lock));
@@ -118,9 +106,10 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
 
   /* handle lookup here, malloc and assign to copy */
   struct sr_nat_mapping *current = nat->mappings;
-  struct sr_nat_mapping *copy = (struct sr_nat_mapping*) malloc (sizeof (struct sr_nat_mapping));
+  struct sr_nat_mapping *copy; 
   while(current != NULL){
     if(current->type==type && current->aux_ext==aux_ext){
+      copy = (struct sr_nat_mapping*) malloc (sizeof (struct sr_nat_mapping));
       copy->type = current->type;
       copy->ip_int =current->ip_int;
       copy->ip_ext =current->ip_ext;
@@ -141,8 +130,7 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
           result-> next = nested;
           result = result-> next;
           next_conn = next_conn->next;
-        }
-       
+        }  
       }
       copy->conns = connection;
       copy->next = NULL;
@@ -212,8 +200,6 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   struct sr_nat_mapping *mapping = (struct sr_nat_mapping*)malloc(sizeof (struct sr_nat_mapping));
   struct sr_nat_mapping *current = nat->mappings;
 
-  
-
   /*loop to the end of list and get the largest external port number */
   int port = 1024;
   while(current != NULL){
@@ -240,9 +226,11 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
 
   /* handle tcp */
   else if(type == nat_mapping_tcp){
-
+    struct sr_nat_connection* new_conn = (strcut sr_nat_connection*)malloc(sizeof(struct sr_nat_connection));
+    new_conn -> next = NULL;
+    mapping -> conns = new_conn;
   }
-  
+
   mapping->next = NULL;
   /* insert new mapping into nat*/
   current = mapping;
