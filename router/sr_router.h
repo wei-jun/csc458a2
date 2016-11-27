@@ -15,6 +15,7 @@
 
 #include "sr_protocol.h"
 #include "sr_arpcache.h"
+#include "sr_nat.h"
 
 /* we dont like this debug , but what to do for varargs ? */
 #ifdef _DEBUG_
@@ -29,6 +30,10 @@
 
 #define INIT_TTL 255
 #define PACKET_DUMP_SIZE 1024
+
+char *INT_INTERFACE = "eth1";
+char *EXT_INTERFACE = "eth2";
+
 
 /* forward declare */
 struct sr_if;
@@ -55,11 +60,8 @@ struct sr_instance
     pthread_attr_t attr;
     FILE* logfile;
     /* the below added for NAT */
-    struct sr_nat* nat;
+    struct sr_nat *nat;
     int nat_on;  /* nat_on = 1 nat enable; 0 not */
-    int icmp_query_timeout;  /* ICMP query timeout interval in seconds */
-    int tcp_est_timeout;  /* TCP Established Idle Timeout in seconds */
-    int tcp_trans_timeout;  /* TCP Transitory Idle Timeout in seconds */
 };
 
 /* -- sr_main.c -- */
