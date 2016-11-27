@@ -81,6 +81,6 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
 
 /* Free the returned Mapping 
 */
- int free_memory(struct sr_nat_mapping* map)
+ int free_memory(struct sr_nat_mapping* map);
 
 #endif
