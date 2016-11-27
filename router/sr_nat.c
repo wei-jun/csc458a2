@@ -227,10 +227,10 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   /*loop to the end of list and get the largest external port number */
   int port = 1024;
   while(current != NULL){
-    if(port < current -> aux_ext){
+    if(port < current->aux_ext){
       port = current->aux_ext;
     }
-    current = current -> next;
+    current = current->next;
   }
   /* create a new external port number */
   port = port + 1;
