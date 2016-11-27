@@ -31,8 +31,9 @@
 #define INIT_TTL 255
 #define PACKET_DUMP_SIZE 1024
 
-const char *INT_INTERFACE = "eth1";
-const char *EXT_INTERFACE = "eth2";
+extern const char *INT_INTERFACE;
+extern const char *EXT_INTERFACE;
+
 
 
 /* forward declare */
