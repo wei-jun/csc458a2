@@ -3,6 +3,11 @@
 #include <assert.h>
 #include "sr_nat.h"
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 
 int sr_nat_init(struct sr_nat *nat) { /* Initializes the nat */
 
@@ -24,12 +29,14 @@ int sr_nat_init(struct sr_nat *nat) { /* Initializes the nat */
   nat->mappings = NULL;
 
   /* initialize internal ip address and external interface ip address of NAT */
-  struct in_addr ipvalue1, ipvalue2;
+  struct in_addr* ext_ip, *inter_ip;
+  ext_ip = (struct in_addr*)malloc(sizeof(struct in_addr));
+  inter_ip=(struct in_addr*)malloc(sizeof(struct in_addr));
   uint32_t out_ip, in_ip;
-  inet_pton(AF_INET, "172.64.3.10", &ipvalue1);
-  out_ip = ipvalue1.s_addr;
-  inet_pton(AF_INET, "10.0.1.11", &ipvalue2);
-  in_ip = ipvalue2.s_addr;
+  inet_pton(AF_INET, "172.64.3.10", &ext_ip);
+  out_ip = ext_ip->s_addr;
+  inet_pton(AF_INET, "10.0.1.11", &inter_ip);
+  in_ip = inter_ip->s_addr;
   nat->out_interface=out_ip;
   nat->in_interface=in_ip;
   /* Initialize any variables here */
@@ -64,9 +71,10 @@ void *sr_nat_timeout(void *nat_ptr) {  /* Periodic Timout handling */
     struct sr_nat_mapping* map; 
     struct sr_nat_mapping* prev = NULL;
     struct sr_nat_mapping* next = NULL;
-    for(map = nat-> mappings; map != NULL; map = map->next){
+    for(map = nat->mappings; map != NULL; map = map->next){
       /* handle imcp timeout*/
-      if(map->type == nat_mapping_icmp && difftime(curtime, map->last_updated) >= 60.0){
+      if( (map->type == nat_mapping_icmp) && 
+        (difftime(curtime, map->last_updated) >= nat->icmp_query_timeout)){
         /* free mapping in the middle of linked list*/
         if(prev){
           next = map->next;
@@ -75,13 +83,13 @@ void *sr_nat_timeout(void *nat_ptr) {  /* Periodic Timout handling */
         /* free top of the linked list*/
         else{
           next = map->next;
-          nat->mapping = next; 
+          nat->mappings = next; 
         }
         free_memory(map);
         break;
       }
 
-      /* handle tcp timeout*/
+      /* handle tcp timeout
       else if(){
         if(prev){
           next = map->next;
@@ -90,11 +98,12 @@ void *sr_nat_timeout(void *nat_ptr) {  /* Periodic Timout handling */
 
         else{
           next = map->next;
-          nat->mapping = next; 
+          nat->mappings = next; 
         }
 
         free_memory(map);
       }
+      */
 
       else{
         
@@ -122,7 +131,7 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
   struct sr_nat_mapping *copy; 
   while(current != NULL){
     if(current->type==type && current->aux_ext==aux_ext){
-      copy = (struct sr_nat_mapping*) malloc (sizeof (struct sr_nat_mapping));
+      copy = (struct sr_nat_mapping*)malloc(sizeof(struct sr_nat_mapping));
       copy->type = current->type;
       copy->ip_int =current->ip_int;
       copy->ip_ext =current->ip_ext;
@@ -139,7 +148,7 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
         /*loop over each tcp connection*/
         while(next_conn != NULL){
           struct sr_nat_connection *nested = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
-          memcpy(nested, next, sizeof(struct sr_nat_connection));
+          memcpy(nested, next_conn, sizeof(struct sr_nat_connection));
           result-> next = nested;
           result = result-> next;
           next_conn = next_conn->next;
@@ -167,7 +176,7 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
   struct sr_nat_mapping *current = nat->mappings;
   struct sr_nat_mapping *copy = (struct sr_nat_mapping*)malloc(sizeof(struct sr_nat_mapping));
   while(current != NULL){
-    if(current->type==type && current->aux_int==aux_int && current->ip_int=ip_int){
+    if(current->type==type && current->aux_int==aux_int && current->ip_int==ip_int){
       copy->type = current->type;
       copy->ip_int =current->ip_int;
       copy->ip_ext =current->ip_ext;
@@ -184,7 +193,7 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
         /*loop over each tcp connection*/
         while(next_conn != NULL){
           struct sr_nat_connection *nested = (struct sr_nat_connection*) malloc(sizeof(struct sr_nat_connection));
-          memcpy(nested, next, sizeof(struct sr_nat_connection));
+          memcpy(nested, next_conn, sizeof(struct sr_nat_connection));
           result-> next = nested;
           result = result-> next;
           next_conn = next_conn->next;
@@ -239,7 +248,7 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   }
   /* handle tcp */
   else if(type == nat_mapping_tcp){
-    struct sr_nat_connection* new_conn = (strcut sr_nat_connection*)malloc(sizeof(struct sr_nat_connection));
+    struct sr_nat_connection* new_conn = (struct sr_nat_connection*)malloc(sizeof(struct sr_nat_connection));
     new_conn->next = NULL;
     mapping->conns = new_conn;
   }
@@ -258,7 +267,7 @@ int free_memory(struct sr_nat_mapping* map){
   if(map != NULL){
     /* free all sr_nap_connections */
     struct sr_nat_connection* connection = map->conns;
-    struct r_nat_connection* next;
+    struct sr_nat_connection* next;
     while(connection != NULL){
       next = connection->next;
       free(connection);
