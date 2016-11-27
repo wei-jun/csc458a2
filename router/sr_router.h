@@ -31,8 +31,8 @@
 #define INIT_TTL 255
 #define PACKET_DUMP_SIZE 1024
 
-extern const char *INT_INTERFACE;
-extern const char *EXT_INTERFACE;
+extern char *INT_INTERFACE;
+extern char *EXT_INTERFACE;
 
 
 

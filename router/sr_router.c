@@ -34,8 +34,8 @@
  *
  *---------------------------------------------------------------------*/
 
-const char *INT_INTERFACE = "eth1";
-const char *EXT_INTERFACE = "eth2";
+char *INT_INTERFACE = "eth1";
+char *EXT_INTERFACE = "eth2";
 
 void sr_init(struct sr_instance* sr)
 {
@@ -803,7 +803,7 @@ void sr_forward_ip_pkt(struct sr_instance* sr,
     else if (ip_hdr->ip_p == ip_protocol_tcp) {
 
       sr_tcp_hdr_t *tcp_hdr;
-      tcp_hdr = (sr_tcp_hdr_t *)(pkt->buf + sizeof(struct sr_ethernet_hdr) + 
+      tcp_hdr = (sr_tcp_hdr_t *)(packet + sizeof(struct sr_ethernet_hdr) + 
         sizeof(struct sr_ip_hdr));
       uint16_t original_tcp_src_port = tcp_hdr->src_port;
       uint16_t original_tcp_dst_port = tcp_hdr->dst_port;
@@ -877,7 +877,9 @@ void sr_forward_ip_pkt(struct sr_instance* sr,
           sr_arpcache_queuereq(&(sr->cache), rtable->gw.s_addr, packet, len, 
              EXT_INTERFACE);
         }
-        
+        free(sr_pkt);
+        free(rtable); 
+        free(nat_mapping);          
       }
 
       /* if the tcp is from external to internal */
@@ -885,7 +887,7 @@ void sr_forward_ip_pkt(struct sr_instance* sr,
 
         /* Look for nat mapping for corresponding dst_ip and dst_aux. */
         struct sr_nat_mapping *nat_mapping;
-        nat_mapping = sr_nat_lookup_external(sr->nat, *original_tcp_dst_port, nat_mapping_icmp);
+        nat_mapping = sr_nat_lookup_external(sr->nat, original_tcp_dst_port, nat_mapping_icmp);
         
         /* if no mapping, drop the packet */
         if (!nat_mapping) {
@@ -948,11 +950,11 @@ void sr_forward_ip_pkt(struct sr_instance* sr,
           sr_arpcache_queuereq(&(sr->cache), rtable->gw.s_addr, packet, len, 
              INT_INTERFACE);
         }
-      }
-      
-      free(sr_pkt);
-      free(rtable); 
-      free(nat_mapping);       
+        free(sr_pkt);
+        free(rtable); 
+        free(nat_mapping); 
+        
+      }      
     }
   }
   
