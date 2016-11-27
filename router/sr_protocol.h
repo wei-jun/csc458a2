@@ -150,7 +150,7 @@ typedef struct sr_ip_hdr sr_ip_hdr_t;
 struct sr_tcp_hdr
   {
     uint16_t src_port;     /* source port */
-    uint16_t dest_port;      /* destination port */
+    uint16_t dst_port;      /* destination port */
     uint32_t seq_num;     /* sequence number */
     uint32_t ack;      /* acknowledgment */
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -165,7 +165,7 @@ struct sr_tcp_hdr
 #error "Byte ordering ot specified " 
 #endif
     uint16_t adv_window;      /* advertised window */
-    uint16_t checksum;      /* checksum */
+    uint16_t tcp_sum;      /* checksum */
     uint16_t urg_pointer;  /* urgent pointer */
   } __attribute__ ((packed)) ;
 typedef struct sr_tcp_hdr sr_tcp_hdr_t;
