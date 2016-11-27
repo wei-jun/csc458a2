@@ -32,6 +32,7 @@
 #include "sr_dumper.h"
 #include "sr_router.h"
 #include "sr_rt.h"
+#include "sr_nat.h"
 
 extern char* optarg;
 
@@ -129,11 +130,12 @@ int main(int argc, char **argv)
     /* -- zero out sr instance -- */
     sr_init_instance(&sr);
     /* added for NAT */
-    sr.nat = 0;
     sr.nat_on = nat_on;
-    sr.icmp_query_timeout = icmp_query_timeout;
-    sr.tcp_est_timeout = tcp_est_timeout;
-    sr.tcp_trans_timeout = tcp_trans_timeout;
+    sr.nat = (struct sr_nat *)malloc(sizeof(struct sr_nat));
+    sr_nat_init(sr.nat);
+    sr.nat->icmp_query_timeout = icmp_query_timeout;
+    sr.nat->tcp_est_timeout = tcp_est_timeout;
+    sr.nat->tcp_trans_timeout = tcp_trans_timeout;
     /* NAT */
 
     /* -- set up routing table from file -- */
