@@ -149,22 +149,21 @@ typedef struct sr_ip_hdr sr_ip_hdr_t;
  */
 struct sr_tcp_hdr
   {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-    unsigned int ip_hl:4;   /* header length */
-    unsigned int ip_v:4;    /* version */
-#elif __BYTE_ORDER == __BIG_ENDIAN
-    unsigned int ip_v:4;    /* version */
-    unsigned int ip_hl:4;   /* header length */
-#else
-#error "Byte ordering ot specified " 
-#endif 
     uint16_t src_port;     /* source port */
     uint16_t dest_port;      /* destination port */
     uint32_t seq_num;     /* sequence number */
     uint32_t ack;      /* acknowledgment */
-
-    uint8_t hdr_len;     /* header length */
-    uint8_t flag;     /* Flags */
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    unsigned int flag:6;   /* flags */
+    unsigned int reserved:6;    /* reserved */
+    unsigned int data_offset:4;   /* data offset */
+#elif __BYTE_ORDER == __BIG_ENDIAN
+    unsigned int data_offset:4;   /* data offset */
+    unsigned int reserved:6;    /* reserved */
+    unsigned int flag:6;   /* flags */    
+#else
+#error "Byte ordering ot specified " 
+#endif
     uint16_t adv_window;      /* advertised window */
     uint16_t checksum;      /* checksum */
     uint16_t urg_pointer;  /* urgent pointer */
@@ -206,6 +205,13 @@ enum sr_arp_opcode {
 
 enum sr_arp_hrd_fmt {
   arp_hrd_ethernet = 0x0001,
+};
+
+enum icmp_type {
+  icmp_echo_reply = 0,
+  icmp_dest_unreachable = 3,
+  icmp_echo_request = 8,
+  icmp_time_exceeded = 11,
 };
 
 
