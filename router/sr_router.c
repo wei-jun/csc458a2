@@ -34,8 +34,7 @@
  *
  *---------------------------------------------------------------------*/
 
-char *INT_INTERFACE = "eth1";
-char *EXT_INTERFACE = "eth2";
+
 
 void sr_init(struct sr_instance* sr)
 {
@@ -953,7 +952,7 @@ void sr_forward_ip_pkt(struct sr_instance* sr,
         free(sr_pkt);
         free(rtable); 
         free(nat_mapping); 
-        
+
       }      
     }
   }
